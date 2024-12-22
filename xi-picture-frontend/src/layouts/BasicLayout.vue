@@ -13,7 +13,7 @@
       <!-- 全局底部栏-->
       <a-layout-footer class="footer">
         <a href="https://github.com/LLLL1024/AISyncCloudGraphHub" target="_blank">
-          云图库 by 程序员兮颜
+          云图汇 by 程序员兮颜
         </a>
       </a-layout-footer>
     </a-layout>
