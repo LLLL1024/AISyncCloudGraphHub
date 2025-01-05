@@ -10,6 +10,9 @@ import com.xiyan.xipicturebackend.exception.BusinessException;
 import com.xiyan.xipicturebackend.exception.ErrorCode;
 import com.xiyan.xipicturebackend.exception.ThrowUtils;
 import com.xiyan.xipicturebackend.manager.FileManager;
+import com.xiyan.xipicturebackend.manager.upload.FilePictureUpload;
+import com.xiyan.xipicturebackend.manager.upload.PictureUploadTemplate;
+import com.xiyan.xipicturebackend.manager.upload.UrlPictureUpload;
 import com.xiyan.xipicturebackend.mapper.PictureMapper;
 import com.xiyan.xipicturebackend.model.dto.file.UploadPictureResult;
 import com.xiyan.xipicturebackend.model.dto.picture.PictureQueryRequest;
@@ -24,7 +27,6 @@ import com.xiyan.xipicturebackend.service.PictureService;
 import com.xiyan.xipicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -45,6 +47,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private FilePictureUpload filePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
 
     /**
      * 校验图片
@@ -72,13 +80,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     /**
      * 上传图片
      *
-     * @param multipartFile
+     * @param inputSource          文件输入源
      * @param pictureUploadRequest
      * @param loginUser
      * @return
      */
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         // 校验参数
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
         // 判断是新增还是删除
@@ -103,7 +111,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 上传图片，得到图片信息
         // 按照用户 id 划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-        UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        // 根据 inputSource 的类型区分上传方式
+//        UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+        if (inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         // 构造要入库的图片信息，也可以用BeanUtils实现（要保证属性名一致）
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());
