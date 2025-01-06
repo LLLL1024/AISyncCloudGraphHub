@@ -23,6 +23,23 @@
           allow-clear
         />
       </a-form-item>
+      <a-form-item name="category" label="分类">
+        <a-auto-complete
+          v-model:value="formData.category"
+          placeholder="请输入分类"
+          :options="categoryOptions"
+          allow-clear
+        />
+      </a-form-item>
+      <a-form-item name="tags" label="标签">
+        <a-select
+          v-model:value="formData.tags"
+          mode="tags"
+          placeholder="请输入标签"
+          :options="tagOptions"
+          allow-clear
+        />
+      </a-form-item>
       <a-form-item>
         <a-button type="primary" html-type="submit" style="width: 100%" :loading="loading">
           执行任务
@@ -42,6 +59,7 @@ import {
 } from '@/api/pictureController.ts'
 import { useRoute, useRouter } from 'vue-router'
 
+// 批量抓取的信息
 const formData = reactive<API.PictureUploadByBatchRequest>({
   count: 10,
 })
@@ -71,6 +89,39 @@ const handleSubmit = async (values: any) => {
   }
   loading.value = false
 }
+
+// 标签和分类选项
+const categoryOptions = ref<string[]>([])
+const tagOptions = ref<string[]>([])
+
+/**
+ * 获取标签和分类选项
+ * @param values
+ */
+const getTagCategoryOptions = async () => {
+  const res = await listPictureTagCategoryUsingGet()
+  if (res.data.code === 0 && res.data.data) {
+    tagOptions.value = (res.data.data.tagList ?? []).map((data: string) => {
+      return {
+        value: data,
+        label: data,
+      }
+    })
+    categoryOptions.value = (res.data.data.categoryList ?? []).map((data: string) => {
+      return {
+        value: data,
+        label: data,
+      }
+    })
+  } else {
+    message.error('获取标签分类列表失败，' + res.data.message)
+  }
+}
+
+// 首次加载页面的时候执行一次
+onMounted(() => {
+  getTagCategoryOptions()
+})
 </script>
 
 <style scoped>
