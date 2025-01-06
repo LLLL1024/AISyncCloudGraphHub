@@ -37,7 +37,17 @@
           {{ dayjs(record.createTime).format('YYYY-MM-DD HH:mm:ss') }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-button danger @click="doDelete(record.id)">删除</a-button>
+          <!-- <a-button danger @click="doDelete(record.id)">删除</a-button> -->
+          <a-popconfirm
+            title="确认要删除该用户吗?"
+            ok-text="确定"
+            cancel-text="取消"
+            @confirm="doDelete(record.id)"
+            @visibleChange="onVisibleChange"
+            :visible="visible"
+          >
+            <a-button danger>删除</a-button>
+          </a-popconfirm>
         </template>
       </template>
     </a-table>
@@ -139,6 +149,19 @@ const doSearch = () => {
   // 重置页码
   searchParams.current = 1
   fetchData()
+}
+
+// 显示或隐藏该组件
+const visible = ref(false)
+// 发送变化的时候，判断是否要隐藏
+function onVisibleChange(v: boolean) {
+  if (!v) {
+    // 希望隐藏
+    visible.value = false
+  } else {
+    // 希望显示
+    visible.value = true
+  }
 }
 
 // 删除数据

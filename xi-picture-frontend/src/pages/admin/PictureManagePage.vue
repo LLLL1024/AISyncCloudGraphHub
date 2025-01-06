@@ -97,18 +97,44 @@
             >
               通过
             </a-button>
-            <a-button
+            <!-- <a-button
               v-if="record.reviewStatus !== PIC_REVIEW_STATUS_ENUM.REJECT"
               type="link"
               danger
               @click="handleReview(record, PIC_REVIEW_STATUS_ENUM.REJECT)"
             >
               拒绝
-            </a-button>
+            </a-button> -->
+            <a-popconfirm
+              title="确认要拒接审核这张图片吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="handleReview(record, PIC_REVIEW_STATUS_ENUM.REJECT)"
+              @visibleChange="onVisibleChange"
+              :visible="visible"
+            >
+              <a-button
+                v-if="record.reviewStatus !== PIC_REVIEW_STATUS_ENUM.REJECT"
+                type="link"
+                danger
+              >
+                拒绝
+              </a-button>
+            </a-popconfirm>
             <a-button type="link" :href="`/add_picture?id=${record.id}`" target="_blank">
               编辑
             </a-button>
-            <a-button danger @click="doDelete(record.id)">删除</a-button>
+            <!-- <a-button danger @click="doDelete(record.id)">删除</a-button> -->
+            <a-popconfirm
+              title="确认要删除这张图片吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="doDelete(record.id)"
+              @visibleChange="onVisibleChange"
+              :visible="visible"
+            >
+              <a-button danger>删除</a-button>
+            </a-popconfirm>
           </a-space>
         </template>
       </template>
@@ -239,6 +265,19 @@ const doSearch = () => {
   // 重置页码
   searchParams.current = 1
   fetchData()
+}
+
+// 显示或隐藏该组件
+const visible = ref(false)
+// 发送变化的时候，判断是否要隐藏
+function onVisibleChange(v: boolean) {
+  if (!v) {
+    // 希望隐藏
+    visible.value = false
+  } else {
+    // 希望显示
+    visible.value = true
+  }
 }
 
 // 删除数据

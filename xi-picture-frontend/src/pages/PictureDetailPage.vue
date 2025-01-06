@@ -49,6 +49,15 @@
           </a-descriptions>
           <!-- 图片操作 -->
           <a-space wrap>
+            <!-- 没必要有审核通过，因为管理员编辑或上传会自动审核，其他用户上传图片不会在主页显示，要管理员在图片管理页面审核即可，因此没有必要有审核通过 -->
+            <!-- <a-button
+              v-if="picture.reviewStatus !== PIC_REVIEW_STATUS_ENUM.PASS && canReview"
+              :icon="h(CheckOutlined)"
+              type="primary"
+              @click="handleReview(picture, PIC_REVIEW_STATUS_ENUM.PASS)"
+            >
+              审核通过
+            </a-button> -->
             <a-button type="primary" @click="doDownload">
               免费下载
               <template #icon>
@@ -58,9 +67,35 @@
             <a-button v-if="canEdit" :icon="h(EditOutlined)" type="default" @click="doEdit">
               编辑
             </a-button>
-            <a-button v-if="canEdit" :icon="h(DeleteOutlined)" danger @click="doDelete">
+            <!-- <a-button v-if="canEdit" :icon="h(DeleteOutlined)" danger @click="doDelete">
               删除
-            </a-button>
+            </a-button> -->
+            <a-popconfirm
+              title="确认要删除这张图片吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="doDelete"
+              @visibleChange="onVisibleChange"
+              :visible="visible"
+            >
+              <a-button v-if="canEdit" :icon="h(DeleteOutlined)" danger>删除</a-button>
+            </a-popconfirm>
+            <a-popconfirm
+              title="确认要拒接审核这张图片吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              @confirm="handleReview(picture, PIC_REVIEW_STATUS_ENUM.REJECT)"
+              @visibleChange="onVisibleChange"
+              :visible="visible"
+            >
+              <a-button
+                v-if="picture.reviewStatus !== PIC_REVIEW_STATUS_ENUM.REJECT && canReview"
+                :icon="h(CloseOutlined)"
+                danger
+              >
+                拒绝
+              </a-button>
+            </a-popconfirm>
           </a-space>
         </a-card>
       </a-col>
@@ -70,9 +105,25 @@
 
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
-import { deletePictureUsingPost, getPictureVoByIdUsingGet } from '@/api/pictureController.ts'
+import {
+  deletePictureUsingPost,
+  getPictureVoByIdUsingGet,
+  listPictureByPageUsingPost,
+  doPictureReviewUsingPost,
+} from '@/api/pictureController.ts'
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  CheckOutlined,
+  CloseOutlined,
+} from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { DeleteOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons-vue'
+import {
+  PIC_REVIEW_STATUS_ENUM,
+  PIC_REVIEW_STATUS_MAP,
+  PIC_REVIEW_STATUS_OPTIONS,
+} from '../constants/picture.ts'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
 import { useRouter } from 'vue-router'
 import { downloadImage, formatSize } from '@/utils'
@@ -96,6 +147,17 @@ const canEdit = computed(() => {
   // 仅本人或管理员可编辑
   const user = picture.value.user || {}
   return loginUser.id === user.id || loginUser.userRole === 'admin'
+})
+
+// 是否具有审核权限，loginUserStore 有可能会变化，所以要用计算属性 computed
+const canReview = computed(() => {
+  const loginUser = loginUserStore.loginUser
+  // 未登录不可审核
+  if (!loginUser.id) {
+    return false
+  }
+  // 仅管理员可审核
+  return loginUser.userRole === 'admin'
 })
 
 // 获取图片详情
@@ -126,6 +188,19 @@ const doEdit = () => {
   router.push('/add_picture?id=' + picture.value.id)
 }
 
+// 显示或隐藏该组件
+const visible = ref(false)
+// 发送变化的时候，判断是否要隐藏
+function onVisibleChange(v: boolean) {
+  if (!v) {
+    // 希望隐藏
+    visible.value = false
+  } else {
+    // 希望显示
+    visible.value = true
+  }
+}
+
 // 删除数据
 const doDelete = async () => {
   const id = picture.value.id
@@ -135,6 +210,7 @@ const doDelete = async () => {
   const res = await deletePictureUsingPost({ id })
   if (res.data.code === 0) {
     message.success('删除成功')
+    router.push('/')
   } else {
     message.error('删除失败')
   }
@@ -143,6 +219,23 @@ const doDelete = async () => {
 // 下载图片
 const doDownload = () => {
   downloadImage(picture.value.url)
+}
+
+// 审核图片
+const handleReview = async (record: API.Picture, reviewStatus: number) => {
+  const reviewMessage =
+    reviewStatus === PIC_REVIEW_STATUS_ENUM.PASS ? '管理员操作通过' : '管理员操作拒绝'
+  const res = await doPictureReviewUsingPost({
+    id: record.id,
+    reviewStatus,
+    reviewMessage,
+  })
+  if (res.data.code === 0) {
+    message.success('审核操作成功')
+    router.push('/')
+  } else {
+    message.error('审核操作失败，' + res.data.message)
+  }
 }
 </script>
 
