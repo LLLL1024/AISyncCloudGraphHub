@@ -6,6 +6,7 @@ import UserManagePage from "@/pages/admin/UserManagePage.vue";
 import AddPicturePage from "@/pages/AddPicturePage.vue";
 import PictureManagePage from "@/pages/admin/PictureManagePage.vue"
 import PictureDetailPage from "@/pages/PictureDetailPage.vue";
+import AddPictureBatchPage from "@/pages/AddPictureBatchPage.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +40,11 @@ const router = createRouter({
       path: '/add_picture',  
       name: '创建图片',  
       component: AddPicturePage,  
+    },
+    {
+      path: '/add_picture/batch',
+      name: '批量创建图片',
+      component: AddPictureBatchPage,
     },
     {  // 由于图片详情页要展示的图片是根据 id 而变化的，所以此处使用动态路由（:id），在页面中可以使用 props 获取到动态的参数
       path: '/picture/:id',  
