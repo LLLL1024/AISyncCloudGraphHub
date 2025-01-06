@@ -33,7 +33,7 @@ public class FilePictureUpload extends PictureUploadTemplate {
     @Override
     protected String getOriginFilename(Object inputSource) {
         MultipartFile multipartFile = (MultipartFile) inputSource;
-        return multipartFile.getOriginalFilename();
+        return multipartFile.getOriginalFilename();  // 获取原始文件名，a.png，会带后缀
     }
 
     @Override

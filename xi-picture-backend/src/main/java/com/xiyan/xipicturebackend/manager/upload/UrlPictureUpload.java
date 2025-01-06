@@ -77,7 +77,24 @@ public class UrlPictureUpload extends PictureUploadTemplate {
     @Override
     protected String getOriginFilename(Object inputSource) {
         String fileUrl = (String) inputSource;
-        return FileUtil.mainName(fileUrl);
+        // 批量抓取的 url 后面本身可能没有文件名后缀（如 png），导致保存到数据库的 url 后面没有文件名后缀（如 png），因此下载图片的图片无法显示
+        // 方法一（只解决了 url 后面有后缀的）
+        //从 url 中提取原始文件名 比如: https://xxxx.cn/logo.png --> logo.png
+        // 测试发现 url 里面没有后缀，那么自己在 url 后面拼接后缀 .png（"jpeg", "png", "jpg", "webp"）
+        URL url = null;
+        try {
+            url = new URL(fileUrl);
+            // 这个方法调用会从路径部分中截取从最后一个斜杠到字符串末尾的部分。FileUtil.getSuffix 用来获取文件名的后缀（即文件扩展名）的
+            fileUrl = url.getFile().substring(url.getFile().lastIndexOf('/'));  // /logo.png
+        } catch (MalformedURLException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "url 格式错误");
+        }
+        return fileUrl;
+        // 方法二（只解决了 url 后面有后缀的）
+//        return fileUrl.substring(fileUrl.lastIndexOf('/') + 1);  // 获取文件名，带后缀，logo.png
+        // 该返回的问题：url 上传图片在数据库中不显示图片格式后缀
+        // 解决办法：修改获取原始文件名方法
+//        return FileUtil.mainName(fileUrl);  // 获取文件名，不会带后缀（如 png），logo
     }
 
     @Override

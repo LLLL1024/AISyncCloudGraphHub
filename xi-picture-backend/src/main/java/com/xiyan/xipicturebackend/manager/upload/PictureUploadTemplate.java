@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import javax.annotation.Resource;
 import java.io.File;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 图片上传模板（抽象类，模板方法模式）
@@ -44,6 +46,17 @@ public abstract class PictureUploadTemplate {
         String uuid = RandomUtil.randomString(16);
         // 需要子类实现
         String originalFilename = getOriginFilename(inputSource);
+        // 解决了批量抓取的 url 后面本身可能没有文件名后缀（如 png），导致保存到数据库的 url 后面没有文件名后缀（如 png），因此下载图片的图片无法显示的问题
+        // 定义常见的图片后缀
+        Set<String> suffixSet = new HashSet<>();
+        suffixSet.add(".jpg");
+        suffixSet.add(".jpeg");
+        suffixSet.add(".png");
+        suffixSet.add(".webp");
+        // 检查 URL 是否已经包含图片后缀
+        if (!suffixSet.contains(FileUtil.getSuffix(originalFilename))) {
+            originalFilename = originalFilename + ".jpg";
+        }
         // 自己拼接文件上传路径，而不是使用原始文件名称，可以增强安全性
         String uploadFilename = String.format("%s_%s.%s", DateUtil.formatDate(new Date()), uuid,
                 FileUtil.getSuffix(originalFilename));
