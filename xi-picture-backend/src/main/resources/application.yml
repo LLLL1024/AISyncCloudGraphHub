@@ -11,10 +11,19 @@ spring:
     url: jdbc:mysql://localhost:3306/xi_picture
     username: root
     password: 1234
+  # Redis 配置
+  redis:
+    database: 0
+    host: localhost  # 127.0.0.1
+    port: 6379
+    timeout: 5000
+    password: 123456
   # 开放更大的文件上传体积
   servlet:
     multipart:
       max-file-size: 10MB
+#  profiles:
+#    active: local
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
