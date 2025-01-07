@@ -1,5 +1,6 @@
 package com.xiyan.xipicturebackend.manager;
 
+import cn.hutool.core.io.FileUtil;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GetObjectRequest;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class CosManager {
@@ -52,9 +55,20 @@ public class CosManager {
                 file);
         // 对图片进行处理（获取基本信息也被视作为一种图片的处理）
         PicOperations picOperations = new PicOperations();
-        // 1 表示返回原图信息
+        // 1. 表示返回原图信息
         picOperations.setIsPicInfo(1);
+        // 图片处理规则列表
+        List<PicOperations.Rule> rules = new ArrayList<>();
+        // 2. 图片压缩（转成 webp 格式）
+        // todo 尝试更大比例的压缩，比如使用 质量变换 来处理图片
+        String webpKey = FileUtil.mainName(key) + ".webp";
+        PicOperations.Rule compressRule = new PicOperations.Rule();
+        compressRule.setFileId(webpKey);
+        compressRule.setBucket(cosClientConfig.getBucket());
+        compressRule.setRule("imageMogr2/format/webp");
+        rules.add(compressRule);
         // 构造处理参数
+        picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
     }
