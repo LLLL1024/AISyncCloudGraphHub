@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiyan.xipicturebackend.exception.BusinessException;
 import com.xiyan.xipicturebackend.exception.ErrorCode;
 import com.xiyan.xipicturebackend.exception.ThrowUtils;
+import com.xiyan.xipicturebackend.manager.CosManager;
 import com.xiyan.xipicturebackend.manager.FileManager;
 import com.xiyan.xipicturebackend.manager.upload.FilePictureUpload;
 import com.xiyan.xipicturebackend.manager.upload.PictureUploadTemplate;
@@ -33,6 +34,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -62,6 +65,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private UrlPictureUpload urlPictureUpload;
+
+    @Autowired
+    private CosManager cosManager;
 
     /**
      * 校验图片
@@ -165,6 +171,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // saveOrUpdate 方法会根据是否有 id 来执行 save 还是 update
         boolean result = this.saveOrUpdate(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败，数据库操作失败");
+        // todo 可自行实现，如果是更新，可以清理图片资源。补充更多清理时机：在重新上传图片时，虽然那条图片记录不会删除，但其实之前的图片文件已经作废了，也可以触发清理逻辑。
+        // this.clearPictureFile(oldPicture);
         return PictureVO.objToVo(picture);
     }
 
@@ -420,6 +428,37 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         return uploadCount;
+    }
+
+    /**
+     * 清理图片文件
+     * todo 还要注意删除对象存储中的文件时传入的是 key（不包含域名的相对路径），而数据库中取到的图片地址是包含域名的，所以删除前要移除域名，从而得到 key
+     * todo 实现更多清理策略：比如用 Spring Scheduler 定时任务实现定时清理、编写一个接口供管理员手动清理，作为一种兜底策略。
+     * todo 优化清理文件的代码，比如要删除多个文件时，使用 对象存储的批量删除接口 代替 for 循环调用。
+     * todo 为了清理原图，可以在数据库中保存原图的地址。
+     *
+     * @param oldPicture
+     */
+    @Async  // 可以使得方法被异步调用，记得要在启动类上添加 @EnableAsync 注解才会生效
+    @Override
+    public void clearPictureFile(Picture oldPicture) {
+        // 判断改图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        long count = this.lambdaQuery()
+                .eq(Picture::getUrl, pictureUrl)
+                .count();
+        // 有不止一条记录用到了该图片，不清理
+        if (count > 1) {
+            return;
+        }
+        // 删除图片
+        // FIXME 注意，这里的 url 包含了域名，实际上只要传 key 值（存储路径）就够了
+        cosManager.deleteObject(pictureUrl);
+        // 删除缩略图，也可以和上面的删除压缩图片一样先判断一下图片是否被多条记录使用，但是该系统没必要
+        String thumbnailUrl = oldPicture.getThumbnailUrl();
+        if (StrUtil.isNotBlank(thumbnailUrl)) {
+            cosManager.deleteObject(thumbnailUrl);
+        }
     }
 }
 
