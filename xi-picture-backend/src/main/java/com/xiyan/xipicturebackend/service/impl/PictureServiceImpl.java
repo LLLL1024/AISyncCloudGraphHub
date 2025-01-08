@@ -130,6 +130,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 构造要入库的图片信息，也可以用BeanUtils实现（要保证属性名一致）
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());
+        picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
 //        picture.setName(uploadPictureResult.getPicName());
         // 支持外层传递图片名称
         String picName = uploadPictureResult.getPicName();

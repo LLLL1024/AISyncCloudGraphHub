@@ -67,6 +67,18 @@ public class CosManager {
         compressRule.setBucket(cosClientConfig.getBucket());
         compressRule.setRule("imageMogr2/format/webp");
         rules.add(compressRule);
+        // 3. 缩略图处理，仅对 > 20 KB 的图片生成缩略图
+        if (file.length() > 2 * 1024) {
+            PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+            // 拼接缩略图的路径，在原图的基础上缩略的，因此取原图的后缀
+            String thumbnailKey = FileUtil.mainName(key) + "_thumbnail." + FileUtil.getSuffix(key);
+            thumbnailRule.setFileId(thumbnailKey);
+            thumbnailRule.setBucket(cosClientConfig.getBucket());
+            // 缩放规则 /thumbnail/<Width>x<Height>>（如果大于原图宽高，则不处理）
+            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
+            rules.add(thumbnailRule);
+        }
+        // todo 除了缩略图之外，还可以提供相对更清晰的 预览图，用于在图片详情页展示，仅在下载时才使用无损原图。
         // 构造处理参数
         picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);

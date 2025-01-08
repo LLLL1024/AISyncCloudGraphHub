@@ -207,6 +207,7 @@ public class PictureController {
      * 分页获取图片列表（封装类，有缓存）
      * todo Redis 缓存和 Caffeine 本地缓存可以通过 模板方法模式或者策略模式进行修改（两种最重要的区别在于查询和存入操作代码不一样），这样提高代码的复用性
      * todo 在里面的代码可以写到 Service 层，因为 Service 层是业务逻辑层，而 Controller 层是控制层，不应该有业务逻辑
+     * todo 笔记查询优化里面还有几个扩展的地方，可以看下
      */
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,

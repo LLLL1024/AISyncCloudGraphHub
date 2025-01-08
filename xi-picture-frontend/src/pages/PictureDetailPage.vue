@@ -4,6 +4,7 @@
       <!-- 图片预览 -->
       <a-col :sm="24" :md="16" :xl="18">
         <a-card title="图片预览">
+          <!-- todo 可以在这里将图片改成预览图，只需该这一次即可，这样还可以优化资源，那么下载还是原图 -->
           <a-image :src="picture.url" style="max-height: 600px; object-fit: contain" />
         </a-card>
       </a-col>
