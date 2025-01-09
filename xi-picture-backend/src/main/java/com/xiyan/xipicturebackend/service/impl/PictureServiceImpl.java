@@ -2,6 +2,7 @@ package com.xiyan.xipicturebackend.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -10,6 +11,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiyan.xipicturebackend.exception.BusinessException;
 import com.xiyan.xipicturebackend.exception.ErrorCode;
 import com.xiyan.xipicturebackend.exception.ThrowUtils;
+import com.xiyan.xipicturebackend.manager.CacheManager;
+import com.xiyan.xipicturebackend.manager.CaffeineManager;
 import com.xiyan.xipicturebackend.manager.CosManager;
 import com.xiyan.xipicturebackend.manager.FileManager;
 import com.xiyan.xipicturebackend.manager.upload.FilePictureUpload;
@@ -35,6 +38,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -68,6 +72,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Autowired
     private CosManager cosManager;
+
+    @Resource
+    private CaffeineManager caffeineManager;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private CacheManager cacheManager;
 
     /**
      * 校验图片
@@ -428,6 +441,71 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         return uploadCount;
+    }
+
+    /**
+     * 从缓存获取图片包装类（分页）
+     * Redis 缓存和 Caffeine 本地缓存可以通过 模板方法模式或者策略模式进行修改（两种最重要的区别在于查询和存入操作代码不一样），这样提高代码的复用性
+     * 由于有数据库的操作用模板方法模式可能对该方法不是很好，因此可以抽取出来当中 CacheManager
+     * @param pictureQueryRequest
+     * @param current
+     * @param size
+     * @return
+     */
+    @Override
+    public Page<PictureVO> getPictureVOPageByCache(PictureQueryRequest pictureQueryRequest, long current, long size, HttpServletRequest request) {
+        // 查询缓存，缓存中没有，再查询数据库
+        // 构建缓存的 key
+//        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+//        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
+//        String cacheKey = String.format("xipicture:listPictureVOByPage:%s", hashKey);
+        String cacheKey = cacheManager.getCacheKey(pictureQueryRequest);
+        // 1. 先从本地缓存中查询
+//        Cache<String, String> localCache = caffeineManager.getLocalCache();
+//        String cachedValue = localCache.getIfPresent(cacheKey);
+//        if (cachedValue != null) {
+//            v
+//            // 缓存结果比数据库查询的结果大小要小一点，因为这里涉及到转换的过程，这个过程没有将为 null 的数据缓存
+//            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+//            return cachedPage;
+//        }
+        Page<PictureVO> cachedPage = cacheManager.getCacheDataByCaffeine(cacheKey);
+        if (!cachedPage.getRecords().isEmpty()) {
+            // 如果缓存命中，返回结果
+            return cachedPage;
+        }
+        // 2. 本地缓存未命中，查询 Redis 分布式缓存
+//        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+//        cachedValue = opsForValue.get(cacheKey);
+//        if (cachedValue != null) {
+//            // 如果缓存命中，更新本地缓存，返回结果
+//            // 缓存结果比数据库查询的结果大小要小一点，因为这里涉及到转换的过程，这个过程没有将为 null 的数据缓存
+//            localCache.put(cacheKey, cachedValue);
+//            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+//            return cachedPage;
+//        }
+        cachedPage = cacheManager.getCacheDataByRedis(cacheKey);
+        if (!cachedPage.getRecords().isEmpty()) {
+            // 如果缓存命中，更新本地缓存，返回结果
+            cacheManager.updateCaffeineCache(cacheKey, cachedPage);
+            return cachedPage;
+        }
+        // 3. 查询数据库
+        Page<Picture> picturePage = this.page(new Page<>(current, size),
+                this.getQueryWrapper(pictureQueryRequest));
+        // 获取封装类
+        Page<PictureVO> pictureVOPage = this.getPictureVOPage(picturePage, request);
+        // 4. 更新缓存
+        // 4.1 更新 Redis 缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // 设置缓存的过期时间，5 - 10 分钟过期，防止缓存雪崩，给过期时间添加一个随机值
+        int cacheExpireTime = 300 + RandomUtil.randomInt(0, 300);
+//        opsForValue.set(cacheKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
+        cacheManager.updateRedisCache(cacheKey, pictureVOPage, cacheExpireTime);
+        // 4.2 写入本地缓存
+//        localCache.put(cacheKey, cacheValue);
+        cacheManager.updateCaffeineCache(cacheKey, pictureVOPage);
+        return pictureVOPage;
     }
 
     /**

@@ -93,6 +93,16 @@ public interface PictureService extends IService<Picture> {
                                  User loginUser);
 
     /**
+     * 从缓存获取图片包装类（分页）
+     *
+     * @param pictureQueryRequest
+     * @param current
+     * @param size
+     * @return
+     */
+    Page<PictureVO> getPictureVOPageByCache(PictureQueryRequest pictureQueryRequest, long current, long size, HttpServletRequest request);
+
+    /**
      * 清理图片文件
      *
      * @param oldPicture
