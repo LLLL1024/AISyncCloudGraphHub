@@ -53,10 +53,11 @@ public abstract class PictureUploadTemplate {
         // 解决了批量抓取的 url 后面本身可能没有文件名后缀（如 png），导致保存到数据库的 url 后面没有文件名后缀（如 png），因此下载图片的图片无法显示的问题
         // 定义常见的图片后缀
         Set<String> suffixSet = new HashSet<>();
-        suffixSet.add(".jpg");
-        suffixSet.add(".jpeg");
-        suffixSet.add(".png");
-        suffixSet.add(".webp");
+        // 不能有. ，FileUtil.getSuffix(originalFilename) 这个获取的是后缀 png
+        suffixSet.add("jpg");
+        suffixSet.add("jpeg");
+        suffixSet.add("png");
+        suffixSet.add("webp");
         // 检查 URL 是否已经包含图片后缀
         if (!suffixSet.contains(FileUtil.getSuffix(originalFilename))) {
             originalFilename = originalFilename + ".jpg";
@@ -88,7 +89,7 @@ public abstract class PictureUploadTemplate {
                     thumbnailCiObject = objectList.get(1);
                 }
                 // 封装压缩图的返回结果
-                return buildResult(originalFilename, compressedCiObject, thumbnailCiObject);
+                return buildResult(originalFilename, compressedCiObject, uploadPath, thumbnailCiObject);
             }
             return buildResult(originalFilename, file, uploadPath, imageInfo);
         } catch (Exception e) {
@@ -117,14 +118,14 @@ public abstract class PictureUploadTemplate {
 
     /**
      * 封装返回结果
-     * todo 可以在 UploadPictureResult 添加一个字段 originUrl，在该方法中多传一个参数 uploadPath 用来 set 到 UploadPictureResult 这里面，用来保存原图到数据库中，因为现在只保存了压缩的图片
+     * 已经实现：可以在 UploadPictureResult 添加一个字段 originUrl，在该方法中多传一个参数 uploadPath 用来 set 到 UploadPictureResult 这里面，用来保存原图到数据库中，因为现在只保存了压缩的图片
      *
      * @param originalFilename   原始文件名
      * @param compressedCiObject 压缩后的对象
      * @param thumbnailCiObject 缩略图对象
      * @return
      */
-    private UploadPictureResult buildResult(String originalFilename, CIObject compressedCiObject, CIObject thumbnailCiObject) {
+    private UploadPictureResult buildResult(String originalFilename, CIObject compressedCiObject, String uploadPath, CIObject thumbnailCiObject) {
         // 计算宽高
         int picWidth = compressedCiObject.getWidth();
         int picHeight = compressedCiObject.getHeight();
@@ -139,6 +140,8 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(compressedCiObject.getFormat());
+        // 设置原始图片地址
+        uploadPictureResult.setOriginalUrl(cosClientConfig.getHost() + "/" + uploadPath);
         // 设置缩略图地址
         uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         // 返回可访问的地址
@@ -162,6 +165,7 @@ public abstract class PictureUploadTemplate {
         // 封装返回结果
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
+        uploadPictureResult.setOriginalUrl(cosClientConfig.getHost() + "/" + uploadPath);
         uploadPictureResult.setPicName(FileUtil.mainName(originalFilename));
         uploadPictureResult.setPicSize(FileUtil.size(file));
         uploadPictureResult.setPicWidth(picWidth);

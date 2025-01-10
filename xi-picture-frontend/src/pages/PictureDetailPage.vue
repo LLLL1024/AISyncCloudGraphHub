@@ -219,7 +219,7 @@ const doDelete = async () => {
 
 // 下载图片
 const doDownload = () => {
-  downloadImage(picture.value.url)
+  downloadImage(picture.value.originalUrl)
 }
 
 // 审核图片

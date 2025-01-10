@@ -209,7 +209,7 @@ public class PictureController {
 
     /**
      * 分页获取图片列表（封装类，有缓存）
-     * todo 图片优化中的查询优化里面还有几个扩展的地方，如 提高一个手动刷新缓存的接口 和 使用 HotKey 自动识别热点图片缓存
+     * todo 图片优化中的查询优化里面还有几个扩展的地方，如 提高一个手动刷新缓存的接口（可以先查数据库在更新缓存） 和 使用 HotKey 自动识别热点图片缓存
      */
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,

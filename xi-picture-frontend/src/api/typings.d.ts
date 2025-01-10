@@ -145,6 +145,7 @@ declare namespace API {
     introduction?: string
     isDelete?: number
     name?: string
+    originalUrl?: string
     picFormat?: string
     picHeight?: number
     picScale?: number
@@ -234,6 +235,7 @@ declare namespace API {
     id?: number
     introduction?: string
     name?: string
+    originalUrl?: string
     picFormat?: string
     picHeight?: number
     picScale?: number

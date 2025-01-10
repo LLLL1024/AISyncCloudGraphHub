@@ -78,7 +78,7 @@ public class CosManager {
             thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
             rules.add(thumbnailRule);
         }
-        // todo 除了缩略图之外，还可以提供相对更清晰的 预览图，用于在图片详情页展示，仅在下载时才使用无损原图。
+        // todo 除了缩略图之外，还可以提供相对更清晰的 预览图（该图片不就可以用压缩的那张图片吗，已经实现了），用于在图片详情页展示，仅在下载时才使用无损原图（originalUrl）。
         // 构造处理参数
         picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
