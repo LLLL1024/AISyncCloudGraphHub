@@ -1,6 +1,7 @@
 package com.xiyan.xipicturebackend.manager;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GetObjectRequest;
@@ -8,13 +9,19 @@ import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.PicOperations;
 import com.xiyan.xipicturebackend.config.CosClientConfig;
+import com.xiyan.xipicturebackend.exception.BusinessException;
+import com.xiyan.xipicturebackend.exception.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Component
 public class CosManager {
     @Resource
@@ -92,5 +99,24 @@ public class CosManager {
      */
     public void deleteObject(String key) {
         cosClient.deleteObject(cosClientConfig.getBucket(), key);
+    }
+
+    /**
+     * 获取存储路径（key）并删除对象
+     * 这里的 url 包含了域名，实际上只要传 key 值（存储路径）就够了
+     *
+     * @param url
+     * @return
+     */
+    public void getUrlCosPathWithDeleteObject(String url) {
+        if (StrUtil.isNotBlank(url)) {
+            try {
+                String urlPath = new URL(url).getPath();
+                this.deleteObject(urlPath);
+            } catch (MalformedURLException e) {
+                log.error("处理图片删除时遇到格式错误的 URL。图片 URL: {}", url, e);
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "url 格式错误");
+            }
+        }
     }
 }
