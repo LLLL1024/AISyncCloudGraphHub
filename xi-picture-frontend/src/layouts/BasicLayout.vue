@@ -6,10 +6,14 @@
       <a-layout-header class="header">
         <GlobalHeader />
       </a-layout-header>
-      <a-layout-content class="content">
-        <!-- 动态路由替换-->
-        <router-view />
-      </a-layout-content>
+      <!-- 全局侧边栏-->
+      <a-layout>
+        <GlobalSider class="sider" />
+        <a-layout-content class="content">
+          <!-- 动态路由替换-->
+          <router-view />
+        </a-layout-content>
+      </a-layout>
       <!-- 全局底部栏-->
       <a-layout-footer class="footer">
         <a href="https://github.com/LLLL1024/AISyncCloudGraphHub" target="_blank">
@@ -22,6 +26,7 @@
 
 <script setup lang="ts">
 import GlobalHeader from '@/components/GlobalHeader.vue'
+import GlobalSider from '@/components/GlobalSider.vue'
 </script>
 
 <style scoped>
@@ -32,9 +37,20 @@ import GlobalHeader from '@/components/GlobalHeader.vue'
 
 #basicLayout .header {
   padding-inline: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 1px;
   color: unset;
   background: white;
+}
+
+#basicLayout .sider {
+  background: #fff;
+  border-right: 0.5px solid #eee;
+  padding-top: 20px;
+}
+
+#basicLayout :deep(.ant-menu-root) {
+  border-bottom: none !important;
+  border-inline-end: none !important;
 }
 
 #basicLayout .content {

@@ -186,7 +186,14 @@ const router = useRouter()
 // 编辑
 // 可以直接复用创建页面，在页面后增加 URL 查询参数 ?id=xx 表示要修改对应 id 的图片
 const doEdit = () => {
-  router.push('/add_picture?id=' + picture.value.id)
+  // router.push('/add_picture?id=' + picture.value.id)
+  router.push({
+    path: '/add_picture',
+    query: {
+      id: picture.value.id,
+      spaceId: picture.value.spaceId,
+    },
+  })
 }
 
 // 显示或隐藏该组件

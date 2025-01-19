@@ -194,6 +194,11 @@ const columns = [
     width: 80,
   },
   {
+    title: '空间 id',
+    dataIndex: 'spaceId',
+    width: 80,
+  },
+  {
     title: '审核信息',
     dataIndex: 'reviewMessage',
   },
@@ -228,6 +233,7 @@ const searchParams = reactive<API.PictureQueryRequest>({
 const fetchData = async () => {
   const res = await listPictureByPageUsingPost({
     ...searchParams,
+    nullSpaceId: true, // 只查询没有空间 id 的图片，防止管理员误删
   })
   if (res.data.code === 0 && res.data.data) {
     dataList.value = res.data.data.records ?? []
