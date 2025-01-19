@@ -437,6 +437,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 //            // 非管理员，无论是编辑还是创建默认都是待审核
 //            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
 //        }
+        // 已经完成：editPicture 方法过来的没有 spaceId 和 userId，因为 PictureEditRequest 没有这写字段，因此添加即可，不然就会有问题
         boolean isPrivateAndOwned = picture.getSpaceId() != null &&
                 picture.getUserId().equals(loginUser.getId());
         // 检查是否为私有空间且属于当前用户，或者用户是管理员
@@ -648,7 +649,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     /**
      * 删除图片
-     * todo 7.4 删除空间时，关联删除空间内的图片
+     * todo 7.4 删除空间时，关联删除空间内的图片，也可以在我的空间加一个删除空间（因为本人也可以）
      * todo 7.5 管理员创建空间：管理员可以为指定用户创建空间。可以在创建空间时多传一个 userId 参数，但是要注意做好权限控制，仅管理员可以为别人创建空间。（目前没啥必要）
      * todo 7.6 目前更新上传图片的逻辑还是存在一些问题的。比如更新图片时，并没有删除原有图片、也没有减少原有图片占用的空间和额度，可以通过事务中补充逻辑或者通过定时任务扫描删除。
      *

@@ -224,7 +224,9 @@ declare namespace API {
     id?: number
     introduction?: string
     name?: string
+    spaceId?: number
     tags?: string[]
+    userId?: number
   }
 
   type PictureQueryRequest = {

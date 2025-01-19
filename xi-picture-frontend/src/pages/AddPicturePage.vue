@@ -75,6 +75,7 @@ import {
 } from '@/api/pictureController.ts'
 import { useRoute, useRouter } from 'vue-router'
 import UrlPictureUpload from '@/components/UrlPictureUpload.vue'
+import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
 
 const router = useRouter() // 实现页面（路由）的跳转
 const route = useRoute() // 与useRouter不一样，获取信息（用于访问当前的路由信息）
@@ -85,6 +86,12 @@ const uploadType = ref<'file' | 'url'>('file')
 // 空间 id
 const spaceId = computed(() => {
   return route.query?.spaceId
+})
+
+// 用户 id
+const loginUserStore = useLoginUserStore()
+const userId = computed(() => {
+  return loginUserStore.loginUser.id
 })
 
 /**
@@ -109,6 +116,7 @@ const handleSubmit = async (values: any) => {
   const res = await editPictureUsingPost({
     id: pictureId,
     spaceId: spaceId.value,
+    userId: userId.value,
     ...values,
   })
   // 操作成功
