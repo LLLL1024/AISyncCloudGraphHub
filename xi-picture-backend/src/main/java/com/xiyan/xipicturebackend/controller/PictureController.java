@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.xiyan.xipicturebackend.annotation.AuthCheck;
+import com.xiyan.xipicturebackend.api.imagesearch.ImageSearchApiFacade;
+import com.xiyan.xipicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.xiyan.xipicturebackend.common.BaseResponse;
 import com.xiyan.xipicturebackend.common.DeleteRequest;
 import com.xiyan.xipicturebackend.common.ResultUtils;
@@ -364,5 +366,25 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
         return ResultUtils.success(uploadCount);
+    }
+
+    /**
+     * 以图搜图
+     * todo 8.2 解决 webp 格式图片无法搜索的问题
+     *  如果想解决上述问题，有几种方案：
+     *      1. 直接在前端拿到识图结果 URL 后，直接新页面打开，而不是把识图结果放到自己的网站页面中
+     *      2. 切换为其他识图接口，比如 Bing 以图搜图 API（可以换成 Bing 的）
+     *      3. 将本项目的图片以 PNG 格式进行压缩
+     */
+    @PostMapping("/search/picture")
+    public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        ThrowUtils.throwIf(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+        Long pictureId = searchPictureByPictureRequest.getPictureId();
+        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+        Picture picture = pictureService.getById(pictureId);
+        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
+//        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getUrl());
+        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getOriginalUrl());
+        return ResultUtils.success(resultList);
     }
 }
