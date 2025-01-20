@@ -370,7 +370,7 @@ public class PictureController {
 
     /**
      * 以图搜图
-     * todo 8.2 解决 webp 格式图片无法搜索的问题
+     * todo 8.2 解决 webp 格式图片无法搜索的问题，该以图搜图只能接收 png 和 jpg 的图片（解决办法可以给用户提示只能接收 png 和 jpg，不然就报错）
      *  如果想解决上述问题，有几种方案：
      *      1. 直接在前端拿到识图结果 URL 后，直接新页面打开，而不是把识图结果放到自己的网站页面中
      *      2. 切换为其他识图接口，比如 Bing 以图搜图 API（可以换成 Bing 的）
@@ -386,5 +386,18 @@ public class PictureController {
 //        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getUrl());
         List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getOriginalUrl());
         return ResultUtils.success(resultList);
+    }
+
+    /**
+     * 按照颜色搜索
+     */
+    @PostMapping("/search/color")
+    public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR);
+        String picColor = searchPictureByColorRequest.getPicColor();
+        Long spaceId = searchPictureByColorRequest.getSpaceId();
+        User loginUser = userService.getLoginUser(request);
+        List<PictureVO> pictureVOList = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
+        return ResultUtils.success(pictureVOList);
     }
 }
