@@ -19,6 +19,9 @@
       </a-space>
     </a-flex>
     <div style="margin-bottom: 16px" />
+    <!-- 搜索表单 -->
+    <PictureSearchForm :onSearch="onSearch" />
+    <div style="margin-bottom: 16px" />
     <!-- 图片列表 -->
     <PictureList :dataList="dataList" :loading="loading" :showOp="true" :onReload="fetchData" />
     <!-- 分页 -->
@@ -39,6 +42,7 @@ import { message } from 'ant-design-vue'
 import { listPictureVoByPageUsingPost } from '@/api/pictureController.ts'
 import { formatSize } from '@/utils'
 import PictureList from '@/components/PictureList.vue'
+import PictureSearchForm from '@/components/PictureSearchForm.vue'
 
 interface Props {
   id: string | number
@@ -74,7 +78,11 @@ const total = ref(0)
 const loading = ref(true)
 
 // 搜索条件
-const searchParams = reactive<API.PictureQueryRequest>({
+// 由于 reactive 只能一个一个修改字段，ref 可以整体控制变量
+// 如果你需要对整个变量进行重新赋值，那么使用 ref 是更好的选择。相比之下，reactive 不适合直接重新赋值整个对象，因为它会失去响应性。
+// ref 可以直接对整个变量重新赋值，而不会失去响应性。
+// reactive 不能直接对整个变量重新赋值，否则会失去响应性。
+const searchParams = ref<API.PictureQueryRequest>({
   current: 1,
   pageSize: 12,
   sortField: 'createTime',
@@ -87,7 +95,7 @@ const fetchData = async () => {
   // 转换搜索参数
   const params = {
     spaceId: props.id, // 路由将 url 上的 id 映射到这里了
-    ...searchParams,
+    ...searchParams.value,
   }
   const res = await listPictureVoByPageUsingPost(params)
   if (res.data.code === 0 && res.data.data) {
@@ -106,8 +114,20 @@ onMounted(() => {
 
 // 分页参数
 const onPageChange = (page: number, pageSize: number) => {
-  searchParams.current = page
-  searchParams.pageSize = pageSize
+  searchParams.value.current = page
+  searchParams.value.pageSize = pageSize
+  fetchData()
+}
+
+// 搜索
+const onSearch = (newSearchParams: API.PictureQueryRequest) => {
+  console.log('new', newSearchParams)
+  searchParams.value = {
+    ...searchParams.value,
+    ...newSearchParams,
+    current: 1,
+  }
+  console.log('searchparams', searchParams.value)
   fetchData()
 }
 </script>
