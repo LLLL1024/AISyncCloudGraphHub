@@ -181,6 +181,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                     throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间 id 不一致");
                 }
             }
+            // 已经完成：可自行实现，如果是更新，可以清理图片资源。补充更多清理时机：在重新上传图片时，虽然那条图片记录不会删除，但其实之前的图片文件已经作废了，也可以触发清理逻辑。
+            this.clearPictureFile(oldPicture);
         }
         // 上传图片，得到图片信息
         // 按照用户 id 划分目录
@@ -266,8 +268,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
             return picture;
         });
-        // todo 可自行实现，如果是更新，可以清理图片资源。补充更多清理时机：在重新上传图片时，虽然那条图片记录不会删除，但其实之前的图片文件已经作废了，也可以触发清理逻辑。
-        // this.clearPictureFile(oldPicture);
         return PictureVO.objToVo(picture);
     }
 
@@ -674,9 +674,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     /**
      * 删除图片
-     * todo 7.4 删除空间时，关联删除空间内的图片，也可以在我的空间加一个删除空间（因为本人也可以）
+     * 已经完成：7.4 删除空间时，关联删除空间内的图片，也可以在我的空间加一个删除空间（因为本人也可以）
      * todo 7.5 管理员创建空间：管理员可以为指定用户创建空间。可以在创建空间时多传一个 userId 参数，但是要注意做好权限控制，仅管理员可以为别人创建空间。（目前没啥必要）
-     * todo 7.6 目前更新上传图片的逻辑还是存在一些问题的。比如更新图片时，并没有删除原有图片、也没有减少原有图片占用的空间和额度，可以通过事务中补充逻辑或者通过定时任务扫描删除。
+     * 已经完成：7.6 目前更新上传图片的逻辑还是存在一些问题的。比如更新图片时，并没有删除原有图片、也没有减少原有图片占用的空间和额度，可以通过事务中补充逻辑或者通过定时任务扫描删除。
      *
      * @param pictureId
      * @param loginUser
@@ -713,6 +713,37 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         });
         // 异步清理文件
         this.clearPictureFile(oldPicture);
+    }
+
+    /**
+     * 删除空间所关联的所有图片
+     *
+     * @param spaceId
+     * @param loginUser
+     */
+    @Override
+    public void deletePicturesBySpaceId(long spaceId, User loginUser) {
+        ThrowUtils.throwIf(spaceId <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+
+        // 操作数据库
+        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id");
+        queryWrapper.eq(ObjUtil.isNotEmpty(spaceId),"spaceId", spaceId);
+        List<Object> pictureObjList = this.getBaseMapper().selectObjs(queryWrapper);
+        List<Long> pictureListId = pictureObjList.stream().map(obj -> (Long) obj).collect(Collectors.toList());
+
+        // 清理文件（不能删完 pictureId 后清理文件，不然就找不到了，这里不和上面一样是异步）
+        // 这里可以做优化
+        for (Long pictureId : pictureListId) {
+            Picture picture = this.getById(pictureId);
+            this.clearPictureFile(picture);
+        }
+
+        // 删除完空间后，空间里面的其他数据（比如大小、数量等数据可以不删除，只需删除图片即可，因为那些数据可以方便查看）
+        // 其实所有数据都可以用上面的那个 deletePicture 进行删除，现阶段先这样
+        boolean result = this.removeBatchByIds(pictureListId);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
     }
 
     /**

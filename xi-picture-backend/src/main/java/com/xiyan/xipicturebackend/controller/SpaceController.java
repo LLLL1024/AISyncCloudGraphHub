@@ -1,5 +1,7 @@
 package com.xiyan.xipicturebackend.controller;
 
+import cn.hutool.core.util.ObjUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiyan.xipicturebackend.annotation.AuthCheck;
 import com.xiyan.xipicturebackend.common.BaseResponse;
@@ -10,10 +12,12 @@ import com.xiyan.xipicturebackend.exception.BusinessException;
 import com.xiyan.xipicturebackend.exception.ErrorCode;
 import com.xiyan.xipicturebackend.exception.ThrowUtils;
 import com.xiyan.xipicturebackend.model.dto.space.*;
+import com.xiyan.xipicturebackend.model.entity.Picture;
 import com.xiyan.xipicturebackend.model.entity.Space;
 import com.xiyan.xipicturebackend.model.entity.User;
 import com.xiyan.xipicturebackend.model.enums.SpaceLevelEnum;
 import com.xiyan.xipicturebackend.model.vo.SpaceVO;
+import com.xiyan.xipicturebackend.service.PictureService;
 import com.xiyan.xipicturebackend.service.SpaceService;
 import com.xiyan.xipicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +42,9 @@ public class SpaceController {
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private PictureService pictureService;
+
     /**
      * 添加空间
      *
@@ -55,6 +62,7 @@ public class SpaceController {
 
     /**
      * 删除空间
+     * 已经完成：删除空间时，关联删除空间内的图片
      *
      * @param deleteRequest
      * @param request
@@ -77,6 +85,16 @@ public class SpaceController {
 //        }
         spaceService.checkSpaceAuth(loginUser, oldSpace);
         // 操作数据库
+        // 在删除空间时，先关联删除空间内的图片
+//        QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.select("id");
+//        queryWrapper.eq(ObjUtil.isNotEmpty(oldSpace.getId()),"spaceId", oldSpace.getId());
+//        List<Object> pictureObjList = pictureService.getBaseMapper().selectObjs(queryWrapper);
+//        List<Long> pictureListId = pictureObjList.stream().map(obj -> (Long) obj).collect(Collectors.toList());
+//        boolean result1 = pictureService.removeBatchByIds(pictureListId);
+//        ThrowUtils.throwIf(!result1, ErrorCode.OPERATION_ERROR);
+        pictureService.deletePicturesBySpaceId(id, loginUser);
+        // 再删空间，先删除空间后面就查不到 picture 的数据了，因此后删空间
         boolean result = spaceService.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);

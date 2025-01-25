@@ -48,7 +48,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     /**
      * 创建空间
-     * todo 7.1 用户注册成功时，可以自动创建空间。即使创建失败了，也可以手动创建作为兜底。
+     * todo 7.1 用户注册成功时，可以自动创建空间。即使创建失败了，也可以手动创建作为兜底。（目前没啥必要）
      * todo 7.2 管理员可以为某个用户创建空间（目前没啥必要）
      * todo 7.3 本地锁改为分布式锁，可以基于 Redisson 实现。（可以看之前做的 AI 答题应用平台项目）。
      *

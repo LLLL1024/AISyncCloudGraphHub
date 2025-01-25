@@ -18,6 +18,7 @@
           空间分析
         </a-button>
         <a-button :icon="h(EditOutlined)" @click="doBatchEdit"> 批量编辑</a-button>
+        <a-button danger :icon="h(DeleteOutlined)" @click="doDeleteSpace"> 删除空间</a-button>
         <a-tooltip
           :title="`占用空间 ${formatSize(space.totalSize)} / ${formatSize(space.maxSize)}`"
         >
@@ -58,8 +59,9 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, h } from 'vue'
-import { getSpaceVoByIdUsingGet } from '@/api/spaceController.ts'
+import { getSpaceVoByIdUsingGet, deleteSpaceUsingPost } from '@/api/spaceController.ts'
 import { message } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
 import {
   listPictureVoByPageUsingPost,
   searchPictureByColorUsingPost,
@@ -70,7 +72,7 @@ import PictureSearchForm from '@/components/PictureSearchForm.vue'
 import { ColorPicker } from 'vue3-colorpicker'
 import 'vue3-colorpicker/style.css'
 import BatchEditPictureModal from '@/components/BatchEditPictureModal.vue'
-import { BarChartOutlined, EditOutlined } from '@ant-design/icons-vue'
+import { BarChartOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 
 interface Props {
   id: string | number
@@ -188,6 +190,24 @@ const onBatchEditPictureSuccess = () => {
 const doBatchEdit = () => {
   if (batchEditPictureModalRef.value) {
     batchEditPictureModalRef.value.openModal()
+  }
+}
+
+const router = useRouter()
+
+// 删除空间
+const doDeleteSpace = async () => {
+  if (!props.id) {
+    return
+  }
+  const res = await deleteSpaceUsingPost({ id: props.id })
+  if (res.data.code === 0) {
+    message.success('删除成功')
+    // 刷新数据
+    fetchData()
+    router.replace('/my_space')
+  } else {
+    message.error('删除失败')
   }
 }
 </script>

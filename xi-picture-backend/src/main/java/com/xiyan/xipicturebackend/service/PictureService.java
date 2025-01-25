@@ -117,6 +117,14 @@ public interface PictureService extends IService<Picture> {
     void deletePicture(long pictureId, User loginUser);
 
     /**
+     * 删除空间所关联的所有图片
+     *
+     * @param spaceId
+     * @param loginUser
+     */
+    void deletePicturesBySpaceId(long spaceId, User loginUser);
+
+    /**
      * 编辑图片
      *
      * @param pictureEditRequest
