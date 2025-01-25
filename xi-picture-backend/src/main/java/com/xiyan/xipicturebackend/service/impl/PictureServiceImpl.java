@@ -1,6 +1,7 @@
 package com.xiyan.xipicturebackend.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -870,6 +871,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     /**
      * 创建扩图任务
+     * 已经完成：9.2 扩图的限制：the size of input image is too small or to large，需要修改一下代码
+     *      * 可以在任务执行前增加基础的校验，只对符合要求的图片创建任务，比如图片不能过大或过小。
+     *      * 图像限制：
+     *      * 图像格式：JPG、JPEG、PNG、HEIF、WEBP。
+     *      * 图像大小：不超过 10MB。
+     *      * 图像分辨率：不低于 512×512 像素且不超过 4096×4096 像素。
+     *      * 图像单边长度范围：[512, 4096]，单位像素。
+     * 已经完成：9.2 任务错误信息优化：完善任务失败的具体原因，帮助用户快速理解和解决问题。比如参数错误、图片格式不支持等。如果调用了第三方接口，需要认真阅读接口所有可能的错误情况。
      *
      * @param createPictureOutPaintingTaskRequest
      * @param loginUser
@@ -880,6 +889,27 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
         Picture picture = Optional.ofNullable(this.getById(pictureId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
+        // 定义常见的图片后缀
+        Set<String> suffixSet = new HashSet<>();
+        suffixSet.add("jpg");
+        suffixSet.add("jpeg");
+        suffixSet.add("png");
+        suffixSet.add("heif");
+        suffixSet.add("webp");
+        // 校验图像格式：JPG、JPEG、PNG、HEIF、WEBP。
+        String suffix = FileUtil.getSuffix(picture.getUrl());
+        if (!suffixSet.contains(suffix.toLowerCase())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "不支持该图片格式");
+        }
+        // 校验图像大小：不超过 10MB。
+        if (picture.getPicSize() > 10 * 1024 * 1024) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片大小超过限制");
+        }
+        // 校验图像分辨率：不低于 512×512 像素且不超过 4096×4096 像素。
+        // 校验图像单边长度范围：[512, 4096]，单位像素。
+        if (picture.getPicWidth() < 512 || picture.getPicWidth() > 4096 || picture.getPicHeight() < 512 || picture.getPicHeight() > 4096) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片分辨率不符合要求");
+        }
         // 校验权限
         checkPictureAuth(loginUser, picture);
         // 创建扩图任务

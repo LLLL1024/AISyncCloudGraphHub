@@ -2,7 +2,7 @@
   <a-modal
     class="image-out-painting"
     v-model:visible="visible"
-    title="AI 扩图"
+    title="AI 扩图（图片有限制，限制信息在下面）"
     :footer="false"
     @cancel="closeModal"
   >
@@ -101,7 +101,7 @@ const startPolling = () => {
           // 清理轮询
           clearPolling()
         } else if (taskResult.taskStatus === 'FAILED') {
-          message.error('扩图任务执行失败')
+          message.error('扩图任务执行失败，图片是有限制的，请重新上传')
           // 清理轮询
           clearPolling()
         }

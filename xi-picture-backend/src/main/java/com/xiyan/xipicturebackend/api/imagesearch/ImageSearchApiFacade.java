@@ -1,9 +1,12 @@
 package com.xiyan.xipicturebackend.api.imagesearch;
 
+import cn.hutool.core.io.FileUtil;
 import com.xiyan.xipicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.xiyan.xipicturebackend.api.imagesearch.sub.GetImageFirstUrlApi;
 import com.xiyan.xipicturebackend.api.imagesearch.sub.GetImageListApi;
 import com.xiyan.xipicturebackend.api.imagesearch.sub.GetImagePageUrlApi;
+import com.xiyan.xipicturebackend.exception.BusinessException;
+import com.xiyan.xipicturebackend.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -23,6 +26,14 @@ public class ImageSearchApiFacade {
      * @return
      */
     public static List<ImageSearchResult> searchImage(String imageUrl) {
+        // 判断只能接收 png 和 jpg 的图片
+        // 将后缀统一转化为小写
+        String suffix = FileUtil.getSuffix(imageUrl);
+        suffix = suffix.toLowerCase();
+        if (!suffix.equals("png") && !suffix.equals("jpg")) {
+            log.error("图片格式不正确，只能接收 png 和 jpg 的图片");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片格式不正确，只能接收 png 和 jpg 的图片");
+        }
         String imagePageUrl = GetImagePageUrlApi.getImagePageUrl(imageUrl);
         String imageFirstUrl = GetImageFirstUrlApi.getImageFirstUrl(imagePageUrl);
         List<ImageSearchResult> imageList = GetImageListApi.getImageList(imageFirstUrl);

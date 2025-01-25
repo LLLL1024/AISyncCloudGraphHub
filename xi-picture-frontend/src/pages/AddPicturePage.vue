@@ -84,6 +84,21 @@
         <a-button type="primary" html-type="submit" style="width: 100%">创建</a-button>
       </a-form-item>
     </a-form>
+    <div class="ai-limit">
+      <a-card title="AI 扩图限制">
+        <p>图像格式：JPG、JPEG、PNG、HEIF、WEBP。</p>
+        <p>图像大小：不超过 10MB。</p>
+        <p>图像分辨率：不低于 512×512 像素且不超过 4096×4096 像素。</p>
+        <p>图像单边长度范围：[512, 4096]，单位像素。</p>
+        <a
+          href="https://help.aliyun.com/zh/model-studio/developer-reference/image-scaling-api?spm=a2c4g.11186623.0.0.7b8368bbS7RZJ4
+"
+          target="_blank"
+        >
+          <p>图像画面扩展 API 参考</p>
+        </a>
+      </a-card>
+    </div>
   </div>
 </template>
 
@@ -248,6 +263,10 @@ const onImageOutPaintingSuccess = (newPicture: API.PictureVO) => {
 }
 
 #addPicturePage .edit-bar {
+  text-align: center;
+  margin: 16px 0;
+}
+#addPicturePage .ai-limit {
   text-align: center;
   margin: 16px 0;
 }

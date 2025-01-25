@@ -377,11 +377,11 @@ public class PictureController {
 
     /**
      * 以图搜图
-     * todo 8.2 解决 webp 格式图片无法搜索的问题，该以图搜图只能接收 png 和 jpg 的图片（解决办法可以给用户提示只能接收 png 和 jpg，不然就报错）
+     * 已经完成： 8.2 解决 webp 格式图片无法搜索的问题，该以图搜图只能接收 png 和 jpg 的图片（解决办法可以给用户提示只能接收 png 和 jpg，不然就报错）
      *  如果想解决上述问题，有几种方案：
      *      1. 直接在前端拿到识图结果 URL 后，直接新页面打开，而不是把识图结果放到自己的网站页面中
      *      2. 切换为其他识图接口，比如 Bing 以图搜图 API（可以换成 Bing 的）
-     *      3. 将本项目的图片以 PNG 格式进行压缩
+     *      3. 将本项目的图片以 PNG 格式进行压缩 或者 以原图 url 进行以图搜图 + 判断只能接收 png 和 jpg 的图片（用的是该方法）
      */
     @PostMapping("/search/picture")
     public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
@@ -391,6 +391,7 @@ public class PictureController {
         Picture picture = pictureService.getById(pictureId);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
 //        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getUrl());
+        // 以原图 url 进行以图搜图
         List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getOriginalUrl());
         return ResultUtils.success(resultList);
     }

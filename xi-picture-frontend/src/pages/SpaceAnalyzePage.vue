@@ -55,6 +55,12 @@ import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
 
+// todo 10 用户行为分析支持同环比分析，在同一个图表中展示两条折线（比如一条是上周的，一条是这周的）。
+// todo 10 【前端】空间排名分析图表中，支持点击某个空间快速跳转查看单个空间详情。
+// todo 10 新增分析需求，按照空间级别对空间进行分类统计，分析不同级别空间的使用情况。
+// todo 10 新增分析需求，管理员可以对系统内图片的审核状态进行分类统计，还可以按时间维度分析图片审核量的变化趋势。
+// todo 10 新增分析需求，管理员可以按时间统计用户的登录次数、图片上传量和活跃度的变化趋势，帮助管理员识别高活跃用户，对用户进行分层管理。
+
 // 与useRouter不一样，获取信息（用于访问当前的路由信息）
 const route = useRoute()
 
