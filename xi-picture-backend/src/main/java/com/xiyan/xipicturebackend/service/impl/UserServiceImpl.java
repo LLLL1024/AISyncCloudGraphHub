@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiyan.xipicturebackend.constant.UserConstant;
 import com.xiyan.xipicturebackend.exception.BusinessException;
 import com.xiyan.xipicturebackend.exception.ErrorCode;
+import com.xiyan.xipicturebackend.manager.auth.StpKit;
 import com.xiyan.xipicturebackend.mapper.UserMapper;
 import com.xiyan.xipicturebackend.model.dto.user.UserQueryRequest;
 import com.xiyan.xipicturebackend.model.entity.User;
@@ -114,6 +115,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         // 4. 保存用户的登录态
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+        // 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 

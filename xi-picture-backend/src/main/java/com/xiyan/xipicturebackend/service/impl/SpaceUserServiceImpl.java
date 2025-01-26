@@ -46,7 +46,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
     private UserService userService;
 
     @Resource
-    @Lazy
+    @Lazy  // spaceServiceImpl 会依赖 spaceUserServiceImpl，spaceUserServiceImpl 会依赖 spaceServiceImpl，如果直接注入，会导致循环依赖，因此在后引入的加个 @Lazy 注解，做到延迟加载，
     private SpaceService spaceService;
 
     // todo 11.1 添加成员到空间时，可以支持发送邀请和审批。实现思路：给空间成员表新增一个邀请确认状态的字段
