@@ -12,12 +12,16 @@ import com.xiyan.xipicturebackend.exception.ThrowUtils;
 import com.xiyan.xipicturebackend.model.dto.space.SpaceAddRequest;
 import com.xiyan.xipicturebackend.model.dto.space.SpaceQueryRequest;
 import com.xiyan.xipicturebackend.model.entity.Space;
+import com.xiyan.xipicturebackend.model.entity.SpaceUser;
 import com.xiyan.xipicturebackend.model.entity.User;
 import com.xiyan.xipicturebackend.model.enums.SpaceLevelEnum;
+import com.xiyan.xipicturebackend.model.enums.SpaceRoleEnum;
+import com.xiyan.xipicturebackend.model.enums.SpaceTypeEnum;
 import com.xiyan.xipicturebackend.model.vo.SpaceVO;
 import com.xiyan.xipicturebackend.model.vo.UserVO;
 import com.xiyan.xipicturebackend.service.SpaceService;
 import com.xiyan.xipicturebackend.mapper.SpaceMapper;
+import com.xiyan.xipicturebackend.service.SpaceUserService;
 import com.xiyan.xipicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -44,6 +48,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     private UserService userService;
 
     @Resource
+    private SpaceUserService spaceUserService;
+
+    @Resource
     private TransactionTemplate transactionTemplate;
 
     /**
@@ -68,6 +75,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         if (space.getSpaceLevel() == null) {
             space.setSpaceLevel(SpaceLevelEnum.COMMON.getValue());
         }
+        if (space.getSpaceType() == null) {
+            space.setSpaceType(SpaceTypeEnum.PRIVATE.getValue());
+        }
         // 填充容量和大小
         this.fillSpaceBySpaceLevel(space);
         // 2. 校验参数
@@ -78,7 +88,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         if (SpaceLevelEnum.COMMON.getValue() != space.getSpaceLevel() && !userService.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限创建指定级别的空间");
         }
-        // 4. 控制同一用户只能创建一个私有空间（不同的用户可以同时创建，每个用户一把锁，而不是整个方法一把锁，这样可以提高性能）
+        // 4. 控制同一用户只能创建一个私有空间、以及一个团队空间（不同的用户可以同时创建，每个用户一把锁，而不是整个方法一把锁，这样可以提高性能）
         // .intern() 将字符串添加到 JVM 的字符串常量池（如果池中不存在该字符串），并返回池中的唯一引用。这意味着所有相同值的字符串都会指向内存中的同一个对象。
         // 这里的意图可能是将 String 用作同步锁对象。通过使用 intern()，可以确保所有使用相同 userId 的线程都会引用内存中的同一个 String 对象，从而实现共享锁。
         String lock = String.valueOf(userId).intern();
@@ -87,12 +97,24 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // 判断是否已有空间
                 boolean exists = this.lambdaQuery()
                         .eq(Space::getUserId, userId)
+                        .eq(Space::getSpaceType, space.getSpaceType())
                         .exists();
-                // 如果已有空间，就不能再创建
-                ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "每个用户仅能有一个私有空间");
+                // 如果已有空间，就不能再创建（只能创建一个私有空间、以及一个团队空间）
+                ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "每个用户每类空间只能创建一个");
                 // 创建
                 boolean result = this.save(space);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "保存空间到数据库失败");
+                // 创建成功后，如果是团队空间，关联新增团队成员记录
+                // 创建团队空间时自动新增成员记录
+                // 用户在创建团队空间时，会默认作为空间的管理员，需要在空间成员表中新增一条记录。
+                if (SpaceTypeEnum.TEAM.getValue() == space.getSpaceType()) {
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setUserId(userId);
+                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
+                }
                 // 返回新写入的数据 id
                 return space.getId();
             });
@@ -113,6 +135,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         String spaceName = space.getSpaceName();
         Integer spaceLevel = space.getSpaceLevel();
         SpaceLevelEnum spaceLevelEnum = SpaceLevelEnum.getEnumByValue(spaceLevel);
+        Integer spaceType = space.getSpaceType();
+        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getEnumByValue(spaceType);
         // 创建时校验
         if (add) {
             if (StrUtil.isBlank(spaceName)) {
@@ -120,6 +144,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             }
             if (spaceLevel == null) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间级别不能为空");
+            }
+            if (spaceType == null) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间类别不能为空");
             }
         }
         // 修改数据时，空间名称进行校验
@@ -129,6 +156,10 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         // 修改数据时，空间级别进行校验
         if (spaceLevel != null && spaceLevelEnum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间级别不存在");
+        }
+        // 修改数据时，空间类别进行校验
+        if (spaceType != null && spaceTypeEnum == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间类别不存在");
         }
     }
 
@@ -208,6 +239,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         Long userId = spaceQueryRequest.getUserId();
         String spaceName = spaceQueryRequest.getSpaceName();
         Integer spaceLevel = spaceQueryRequest.getSpaceLevel();
+        Integer spaceType = spaceQueryRequest.getSpaceType();
         String sortField = spaceQueryRequest.getSortField();
         String sortOrder = spaceQueryRequest.getSortOrder();
         // 拼接查询条件
@@ -215,6 +247,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         queryWrapper.eq(ObjUtil.isNotEmpty(userId), "userId", userId);
         queryWrapper.like(StrUtil.isNotBlank(spaceName), "spaceName", spaceName);
         queryWrapper.eq(ObjUtil.isNotEmpty(spaceLevel), "spaceLevel", spaceLevel);
+        queryWrapper.eq(ObjUtil.isNotEmpty(spaceType), "spaceType", spaceType);
         // 排序
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
         return queryWrapper;
