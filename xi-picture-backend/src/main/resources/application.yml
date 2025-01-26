@@ -31,6 +31,36 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
+  # 空间图片分表（AI 答题平台用的是分库分表的静态分表，而该系统用的是动态分表）
+  shardingsphere:
+    datasource:
+      names: xi_picture
+      xi_picture:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/xi_picture
+        username: root
+        password: 1234
+    rules:
+      sharding:
+        tables:
+          picture:
+            # actual-data-nodes 一般情况下是指定一段分表的范围，比如 yu_picture.picture_${0..9999} 表示有 picture_0 ~ picture_9999 这 10000 张分表。ShardingSphere 在执行分表查询时会校验要查询的表（比如 picture_123456789）是否在 actual-data-nodes 的配置范围内。但是由于 spaceId 是长整型，范围太大，无法通过指定范围将所有分表名称包含，导致无法通过框架内置的校验。所以此处将 actual-data-nodes 的值设置为逻辑表 yu_picture.picture。
+            actual-data-nodes: xi_picture.picture # 动态分表
+            # 指定分表字段为 spaceId、分表算法为自定义的分片算法 picture_sharding_algorithm。
+            table-strategy:
+              standard:
+                sharding-column: spaceId
+                sharding-algorithm-name: picture_sharding_algorithm  # 使用自定义分片算法
+        # 配置自定义分片算法，采用基于自定义类的方式实现，算法的类名配置必须为类的绝对路径。
+        sharding-algorithms:
+          picture_sharding_algorithm:
+            type: CLASS_BASED
+            props:
+              strategy: standard
+              algorithmClassName: com.xiyan.xipicturebackend.manager.sharding.PictureShardingAlgorithm
+    props:
+      sql-show: true
 #  profiles:
 #    active: local
 mybatis-plus:
@@ -39,6 +69,8 @@ mybatis-plus:
     # 仅在开发环境开启日志
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
+    # 注意，想要使用 MyBatis Plus 的 SqlRunner，必须要开启配置
+    enable-sql-runner: true
     db-config:
       logic-delete-field: isDelete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
