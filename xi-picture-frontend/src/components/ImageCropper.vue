@@ -19,23 +19,38 @@
       :center-box="true"
     />
     <div style="margin-bottom: 16px" />
+    <!-- 协同编辑操作 -->
+    <div class="image-edit-actions" v-if="isTeamSpace">
+      <a-space>
+        <a-button v-if="editingUser" disabled>{{ editingUser.userName }} 正在编辑</a-button>
+        <a-button v-if="canEnterEdit" type="primary" ghost @click="enterEdit">进入编辑</a-button>
+        <a-button v-if="canExitEdit" danger ghost @click="exitEdit">退出编辑</a-button>
+      </a-space>
+    </div>
+    <div style="margin-bottom: 16px" />
     <!-- 图片操作 -->
     <div class="image-cropper-actions">
       <a-space>
-        <a-button @click="rotateLeft">向左旋转</a-button>
-        <a-button @click="rotateRight">向右旋转</a-button>
-        <a-button @click="changeScale(1)">放大</a-button>
-        <a-button @click="changeScale(-1)">缩小</a-button>
-        <a-button type="primary" :loading="loading" @click="handleConfirm">确认</a-button>
+        <a-button @click="rotateLeft" :disabled="!canEdit">向左旋转</a-button>
+        <a-button @click="rotateRight" :disabled="!canEdit">向右旋转</a-button>
+        <a-button @click="changeScale(1)" :disabled="!canEdit">放大</a-button>
+        <a-button @click="changeScale(-1)" :disabled="!canEdit">缩小</a-button>
+        <a-button type="primary" :loading="loading" :disabled="!canEdit" @click="handleConfirm"
+          >确认
+        </a-button>
       </a-space>
     </div>
   </a-modal>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { computed, onUnmounted, ref, watchEffect } from 'vue'
 import { uploadPictureUsingPost } from '@/api/pictureController.ts'
 import { message } from 'ant-design-vue'
+import { useLoginUserStore } from '@/stores/useLoginUserStore.ts'
+import PictureEditWebSocket from '@/utils/pictureEditWebSocket.ts'
+import { PICTURE_EDIT_ACTION_ENUM, PICTURE_EDIT_MESSAGE_TYPE_ENUM } from '@/constants/picture.ts'
+import { SPACE_TYPE_ENUM } from '@/constants/space.ts'
 
 // todo 9.1 优化业务流程：在图片上传前，先触发编辑弹窗，完成图片裁剪后再上传到后端。这样需要将编辑图片整合到图片上传组件内部，而不是平级的关系。
 // todo 9.1 支持调整裁剪区域的固定比例（比如 16:9），实现思路是利用 vue-cropper 组件的 fixedNumber 属性.
@@ -46,10 +61,16 @@ interface Props {
   imageUrl?: string
   picture?: API.PictureVO
   spaceId?: number
+  space?: API.SpaceVO
   onSuccess?: (newPicture: API.PictureVO) => void
 }
 
 const props = defineProps<Props>()
+
+// 是否为团队空间
+const isTeamSpace = computed(() => {
+  return props.space?.spaceType === SPACE_TYPE_ENUM.TEAM
+})
 
 // 获取图片裁切器的引用
 const cropperRef = ref()
@@ -57,16 +78,23 @@ const cropperRef = ref()
 // 缩放比例
 const changeScale = (num) => {
   cropperRef.value?.changeScale(num)
+  if (num > 0) {
+    editAction(PICTURE_EDIT_ACTION_ENUM.ZOOM_IN)
+  } else {
+    editAction(PICTURE_EDIT_ACTION_ENUM.ZOOM_OUT)
+  }
 }
 
 // 向左旋转
 const rotateLeft = () => {
   cropperRef.value.rotateLeft()
+  editAction(PICTURE_EDIT_ACTION_ENUM.ROTATE_LEFT)
 }
 
 // 向右旋转
 const rotateRight = () => {
   cropperRef.value.rotateRight()
+  editAction(PICTURE_EDIT_ACTION_ENUM.ROTATE_RIGHT)
 }
 
 // 确认裁切
@@ -118,12 +146,158 @@ const openModal = () => {
 // 关闭弹窗
 const closeModal = () => {
   visible.value = false
+  // 断开 WebSocket 连接
+  if (websocket) {
+    websocket.disconnect()
+  }
+  editingUser.value = undefined
 }
 
 // 暴露函数给父组件
 defineExpose({
   openModal,
 })
+
+// --------- 实时编辑 ---------
+const loginUserStore = useLoginUserStore()
+const loginUser = loginUserStore.loginUser
+
+// 正在编辑的用户
+const editingUser = ref<API.UserVO>()
+// 当前用户是否可进入编辑
+const canEnterEdit = computed(() => {
+  return !editingUser.value
+})
+// 正在编辑的用户是本人，可退出编辑
+const canExitEdit = computed(() => {
+  return editingUser.value?.id === loginUser.id
+})
+// 可以点击编辑图片的操作按钮
+const canEdit = computed(() => {
+  // 不是团队空间，默认就可以编辑
+  if (!isTeamSpace.value) {
+    return true
+  }
+  // 团队空间，只有编辑者才能协同编辑
+  return editingUser.value?.id === loginUser.id
+})
+
+// 编写 WebSocket 逻辑
+let websocket: PictureEditWebSocket | null
+
+// 初始化 WebSocket 连接，绑定监听事件
+const initWebsocket = () => {
+  const pictureId = props.picture?.id
+  if (!pictureId || !visible.value) {
+    return
+  }
+  // 防止之前的连接未释放
+  if (websocket) {
+    websocket.disconnect()
+  }
+  // 创建 websocket 实例
+  websocket = new PictureEditWebSocket(pictureId)
+  // 建立连接
+  websocket.connect()
+
+  // 监听一系列的事件
+  // msg 是后端传给前端的
+  websocket.on(PICTURE_EDIT_MESSAGE_TYPE_ENUM.INFO, (msg) => {
+    console.log('收到通知消息：', msg)
+    message.info(msg.message)
+  })
+
+  websocket.on(PICTURE_EDIT_MESSAGE_TYPE_ENUM.ERROR, (msg) => {
+    console.log('收到错误通知：', msg)
+    message.info(msg.message)
+  })
+
+  websocket.on(PICTURE_EDIT_MESSAGE_TYPE_ENUM.ENTER_EDIT, (msg) => {
+    console.log('收到进入编辑状态的消息：', msg)
+    message.info(msg.message)
+    editingUser.value = msg.user
+  })
+
+  websocket.on(PICTURE_EDIT_MESSAGE_TYPE_ENUM.EDIT_ACTION, (msg) => {
+    console.log('收到编辑操作的消息：', msg)
+    message.info(msg.message)
+    // 根据收到的编辑操作，执行相应的操作
+    switch (msg.editAction) {
+      case PICTURE_EDIT_ACTION_ENUM.ROTATE_LEFT:
+        rotateLeft()
+        break
+      case PICTURE_EDIT_ACTION_ENUM.ROTATE_RIGHT:
+        rotateRight()
+        break
+      case PICTURE_EDIT_ACTION_ENUM.ZOOM_IN:
+        changeScale(1)
+        break
+      case PICTURE_EDIT_ACTION_ENUM.ZOOM_OUT:
+        changeScale(-1)
+        break
+    }
+  })
+
+  websocket.on(PICTURE_EDIT_MESSAGE_TYPE_ENUM.EXIT_EDIT, (msg) => {
+    console.log('收到退出编辑状态的消息：', msg)
+    message.info(msg.message)
+    editingUser.value = undefined
+  })
+}
+
+// 监听属性和 visible 变化，初始化 WebSocket 连接
+watchEffect(() => {
+  // 只有团队空间，才初始化 WebSocket 连接
+  if (isTeamSpace.value) {
+    initWebsocket()
+  }
+})
+
+// 组件销毁时，断开 WebSocket 连接
+onUnmounted(() => {
+  // 断开 WebSocket 连接
+  if (websocket) {
+    websocket.disconnect()
+  }
+  editingUser.value = undefined
+})
+
+// 进入编辑状态
+const enterEdit = () => {
+  if (websocket) {
+    // 发送进入编辑状态的请求
+    websocket.sendMessage({
+      type: PICTURE_EDIT_MESSAGE_TYPE_ENUM.ENTER_EDIT,
+    })
+  }
+}
+
+// 退出编辑状态
+const exitEdit = () => {
+  if (websocket) {
+    // 发送退出编辑状态的请求
+    websocket.sendMessage({
+      type: PICTURE_EDIT_MESSAGE_TYPE_ENUM.EXIT_EDIT,
+    })
+  }
+}
+
+// 编辑图片操作
+const editAction = (action: string) => {
+  if (websocket) {
+    // 发送编辑操作的请求
+    websocket.sendMessage({
+      type: PICTURE_EDIT_MESSAGE_TYPE_ENUM.EDIT_ACTION,
+      editAction: action,
+    })
+  }
+}
+
+// todo 12.1 支持 WebSocket 断线重连，应对服务器突然宕机的情况
+// todo 12.2 如果没有用户进入编辑状态，打开图片编辑弹窗时自动进入编辑，不需要手动点击按钮进入编辑
+// todo 12.3 新增一个“用户保存”事件，某用户点击保存后，关闭其他用户的编辑弹窗，并且更新当前展示的图片（可以实现一下）
+// todo 12.4 可能还会有一些细节问题，比如新用户打开编辑弹窗时，无法获取到正在编辑的用户信息、也无法获取到当前已编辑的图片状态，大家可以自行测试和优化。（可以实现一下）
+// todo 12.5 可以通过传递 CSS 样式的方式实现裁切框区域的实时协作。但其实移动编辑框时并没有修改图片，所以作用不是很大。（目前没啥必要）
 </script>
 
 <!-- 不用 scoped，因为 a-modal 样式需要全局生效 -->
