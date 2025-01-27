@@ -49,8 +49,8 @@
               <!-- todo 可以实现一个移到图标上就显示文字的效果-->
               <ShareAltOutlined @click="(e) => doShare(picture, e)" />
               <SearchOutlined @click="(e) => doSearch(picture, e)" />
-              <EditOutlined @click="(e) => doEdit(picture, e)" />
-              <DeleteOutlined @click="(e) => doDelete(picture, e)" />
+              <EditOutlined v-if="canEdit" @click="(e) => doEdit(picture, e)" />
+              <DeleteOutlined v-if="canDelete" @click="(e) => doDelete(picture, e)" />
             </template>
           </a-card>
         </a-list-item>
@@ -77,6 +77,8 @@ interface Props {
   dataList?: API.PictureVO[]
   loading?: boolean
   showOp?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
   onReload?: () => void
 }
 
@@ -84,6 +86,8 @@ const props = withDefaults(defineProps<Props>(), {
   dataList: () => [],
   loading: false,
   showOp: false,
+  canEdit: false,
+  canDelete: false,
 })
 
 const router = useRouter()

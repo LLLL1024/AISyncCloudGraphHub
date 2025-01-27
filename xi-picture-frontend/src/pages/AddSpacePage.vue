@@ -1,7 +1,8 @@
 <template>
   <div id="addSpacePage">
     <h2 style="margin-bottom: 16px">
-      {{ route.query?.id ? '修改空间' : '创建空间' }}
+      <!-- {{ route.query?.id ? '修改空间' : '创建空间' }} -->
+      {{ route.query?.id ? '修改' : '创建' }} {{ SPACE_TYPE_MAP[spaceType] }}
     </h2>
     <!-- 空间信息表单 -->
     <a-form name="spaceForm" layout="vertical" :model="spaceForm" @finish="handleSubmit">
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   addSpaceUsingPost,
@@ -47,12 +48,28 @@ import {
   updateSpaceUsingPost,
 } from '@/api/spaceController.ts'
 import { useRoute, useRouter } from 'vue-router'
-import { SPACE_LEVEL_OPTIONS } from '@/constants/space.ts'
+import {
+  SPACE_LEVEL_MAP,
+  SPACE_LEVEL_OPTIONS,
+  SPACE_TYPE_ENUM,
+  SPACE_TYPE_MAP,
+} from '@/constants/space.ts'
 import { formatSize } from '../utils'
 
 const space = ref<API.SpaceVO>()
 const spaceForm = reactive<API.SpaceAddRequest | API.SpaceEditRequest>({})
 const loading = ref(false)
+
+const route = useRoute()
+// 空间类别，默认为私有空间
+const spaceType = computed(() => {
+  if (route.query?.type) {
+    return Number(route.query.type)
+  } else {
+    return SPACE_TYPE_ENUM.PRIVATE
+  }
+})
+
 const spaceLevelList = ref<API.SpaceLevel[]>([])
 
 // 获取空间级别
@@ -77,6 +94,7 @@ const router = useRouter() // 实现页面（路由）的跳转
 // todo 在空间内上传图片时可以使用弹窗组件，而不是打开新页面，更轻量。
 // todo 上传图片到空间时，上传页面可以展示出空间名称、容量等信息，并且前端也可以判断是否具有权限，优化用户体验。
 // todo 图片详情页、空间详情页前端增加权限判断逻辑，相比单纯靠后端进行权限校验，可以给用户更好的体验。
+
 /**
  * 提交表单
  * @param values
@@ -95,8 +113,10 @@ const handleSubmit = async (values: any) => {
     // 创建
     res = await addSpaceUsingPost({
       ...spaceForm,
+      spaceType: spaceType.value,
     })
   }
+
   // 操作成功
   if (res.data.code === 0 && res.data.data) {
     message.success('操作成功')
@@ -110,7 +130,7 @@ const handleSubmit = async (values: any) => {
   loading.value = false
 }
 
-const route = useRoute() // 与useRouter不一样，获取信息（用于访问当前的路由信息）
+// const route = useRoute() // 与useRouter不一样，获取信息（用于访问当前的路由信息）
 
 // 获取老数据
 const getOldSpace = async () => {
