@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.xiyan.xipicturebackend.manager.websocket.disruptor.PictureEditEventProducer;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditActionEnum;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditMessageTypeEnum;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditRequestMessage;
@@ -34,6 +35,10 @@ public class PictureEditHandler extends TextWebSocketHandler {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    @Lazy  // 防止循环依赖
+    private PictureEditEventProducer pictureEditEventProducer;
 
     // 每张图片的编辑状态，key: pictureId, value: 当前正在编辑的用户 ID，保证线程安全要用线程安全的并发哈希 Map
     private final Map<Long, Long> pictureEditingUsers = new ConcurrentHashMap<>();
@@ -80,32 +85,35 @@ public class PictureEditHandler extends TextWebSocketHandler {
         PictureEditMessageTypeEnum pictureEditMessageTypeEnum = PictureEditMessageTypeEnum.valueOf(type);
 
         // 从 Session 属性中获取公共参数
-        Map<String, Object> attributes = session.getAttributes();
-        User user = (User) attributes.get("user");
-        Long pictureId = (Long) attributes.get("pictureId");
+        User user = (User) session.getAttributes().get("user");
+        Long pictureId = (Long) session.getAttributes().get("pictureId");
 
-        // 调用对应的消息处理方法（收到前端发送的消息，根据消息类别处理消息）
-        switch (pictureEditMessageTypeEnum) {
-            // "INFO", "ERROR" 是服务器返回给前端的一个消息提示，但是前端不会主动给后端发 "INFO", "ERROR" 的事件，因此不需要这两种
-            // todo 12 这三个方法的参数是一致的，因此可以使用策略模式去实现
-            case ENTER_EDIT:
-                handleEnterEditMessage(pictureEditRequestMessage, session, user, pictureId);
-                break;
-            case EDIT_ACTION:
-                handleEditActionMessage(pictureEditRequestMessage, session, user, pictureId);
-                break;
-            case EXIT_EDIT:
-                handleExitEditMessage(pictureEditRequestMessage, session, user, pictureId);
-                break;
-            default:
-                // 其他消息类型，返回错误提示给当前的用户（前端）
-                PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
-                pictureEditResponseMessage.setType(PictureEditMessageTypeEnum.ERROR.getValue());
-                pictureEditResponseMessage.setMessage("消息类型错误");
-                pictureEditResponseMessage.setUser(userService.getUserVO(user));
-                // 按理来说这里也要处理 JSON 精度问题，但这里只是一个 ERROR，所以就不处理了
-                session.sendMessage(new TextMessage(JSONUtil.toJsonStr(pictureEditResponseMessage)));
-        }
+        // 根据消息类型处理消息（生产消息到 Disruptor 环形队列中）
+        pictureEditEventProducer.publishEvent(pictureEditRequestMessage, session, user, pictureId);
+
+//        // 调用对应的消息处理方法（收到前端发送的消息，根据消息类别处理消息）
+//        switch (pictureEditMessageTypeEnum) {
+//            // "INFO", "ERROR" 是服务器返回给前端的一个消息提示，但是前端不会主动给后端发 "INFO", "ERROR" 的事件，因此不需要这两种
+//            // todo 12.2 这三个方法的参数是一致的，因此可以使用策略模式去实现（每种类型的消息处理可以封装为独立的 Handler 处理器类，也就是采用策略模式。）
+//            case ENTER_EDIT:
+//                handleEnterEditMessage(pictureEditRequestMessage, session, user, pictureId);
+//                break;
+//            case EDIT_ACTION:
+//                handleEditActionMessage(pictureEditRequestMessage, session, user, pictureId);
+//                break;
+//            case EXIT_EDIT:
+//                handleExitEditMessage(pictureEditRequestMessage, session, user, pictureId);
+//                break;
+//            default:
+//                // 其他消息类型，返回错误提示给当前的用户（前端）
+//                PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
+//                pictureEditResponseMessage.setType(PictureEditMessageTypeEnum.ERROR.getValue());
+//                pictureEditResponseMessage.setMessage("消息类型错误");
+//                pictureEditResponseMessage.setUser(userService.getUserVO(user));
+//                // 按理来说这里也要处理 JSON 精度问题，但这里只是一个 ERROR，所以就不处理了
+//                session.sendMessage(new TextMessage(JSONUtil.toJsonStr(pictureEditResponseMessage)));
+//                break;
+//        }
     }
 
 
@@ -264,4 +272,9 @@ public class PictureEditHandler extends TextWebSocketHandler {
     private void broadcastToPicture(Long pictureId, PictureEditResponseMessage pictureEditResponseMessage) throws IOException {
         broadcastToPicture(pictureId, pictureEditResponseMessage, null);
     }
+
+    // todo 12.1 为防止消息丢失，可以使用 Redis 等高性能存储保存执行的操作记录。
+    // 12.1 目前如果图片已经被编辑了，新用户加入编辑时没办法查看到已编辑的状态，这一点也可以利用 Redis 保存操作记录来解决，新用户加入编辑时读取 Redis 的操作记录即可。
+    // todo 12.3 支持分布式 WebSocket。实现思路很简单，只需要保证要编辑同一图片的用户连接的是相同的服务器即可，和游戏分服务器大区、聊天室分房间是类似的原理。
+    // todo 12.4 一些小问题的优化：比如 WebSocket 连接建立之后，如果用户退出了登录，这时 WebSocket 的连接是没有断开的。不过影响并不大，大家可以思考下怎么处理。（目前可以不处理）
 }
