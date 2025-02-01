@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.xiyan.xipicturebackend.mapper.SpaceMapper">
+<mapper namespace="com.xiyan.xipicture.infrastructure.mapper.SpaceMapper">
 
-    <resultMap id="BaseResultMap" type="com.xiyan.xipicturebackend.model.entity.Space">
+    <resultMap id="BaseResultMap" type="com.xiyan.xipicture.domain.space.entity.Space">
             <id property="id" column="id" jdbcType="BIGINT"/>
             <result property="spaceName" column="spaceName" jdbcType="VARCHAR"/>
             <result property="spaceLevel" column="spaceLevel" jdbcType="INTEGER"/>

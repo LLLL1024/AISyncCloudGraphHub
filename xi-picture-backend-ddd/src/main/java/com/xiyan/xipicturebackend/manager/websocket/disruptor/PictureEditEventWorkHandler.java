@@ -6,8 +6,8 @@ import com.xiyan.xipicturebackend.manager.websocket.PictureEditHandler;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditMessageTypeEnum;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditRequestMessage;
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditResponseMessage;
-import com.xiyan.xipicturebackend.model.entity.User;
-import com.xiyan.xipicturebackend.service.UserService;
+import com.xiyan.xipicture.domain.user.entity.User;
+import com.xiyan.xipicture.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -25,7 +25,7 @@ public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent
     private PictureEditHandler pictureEditHandler;
 
     @Resource
-    private UserService userService;
+    private UserApplicationService userApplicationService;
 
     @Override
     public void onEvent(PictureEditEvent pictureEditEvent) throws Exception {
@@ -54,7 +54,7 @@ public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent
                 PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
                 pictureEditResponseMessage.setType(PictureEditMessageTypeEnum.ERROR.getValue());
                 pictureEditResponseMessage.setMessage("消息类型错误");
-                pictureEditResponseMessage.setUser(userService.getUserVO(user));
+                pictureEditResponseMessage.setUser(userApplicationService.getUserVO(user));
                 // 按理来说这里也要处理 JSON 精度问题，但这里只是一个 ERROR，所以就不处理了
                 session.sendMessage(new TextMessage(JSONUtil.toJsonStr(pictureEditResponseMessage)));
                 break;

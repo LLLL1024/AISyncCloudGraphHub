@@ -1,7 +1,7 @@
 ### Custom ###
 application-local.yml
 src/main/resources/application-local.yml
-src/main/java/com/xiyan/xipicturebackend/constant/PrivateConstant.java
+src/main/java/com/xiyan/xipicture/domain/user/constant/PrivateConstant.java
 
 HELP.md
 target/

@@ -1,7 +1,7 @@
 package com.xiyan.xipicturebackend.manager.websocket.disruptor;
 
 import com.xiyan.xipicturebackend.manager.websocket.model.PictureEditRequestMessage;
-import com.xiyan.xipicturebackend.model.entity.User;
+import com.xiyan.xipicture.domain.user.entity.User;
 import lombok.Data;
 import org.springframework.web.socket.WebSocketSession;
 

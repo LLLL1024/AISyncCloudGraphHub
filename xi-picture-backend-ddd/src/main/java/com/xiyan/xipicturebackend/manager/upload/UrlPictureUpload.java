@@ -1,14 +1,13 @@
 package com.xiyan.xipicturebackend.manager.upload;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpStatus;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.http.Method;
-import com.xiyan.xipicturebackend.exception.BusinessException;
-import com.xiyan.xipicturebackend.exception.ErrorCode;
-import com.xiyan.xipicturebackend.exception.ThrowUtils;
+import com.xiyan.xipicture.infrastructure.exception.BusinessException;
+import com.xiyan.xipicture.infrastructure.exception.ErrorCode;
+import com.xiyan.xipicture.infrastructure.exception.ThrowUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.File;

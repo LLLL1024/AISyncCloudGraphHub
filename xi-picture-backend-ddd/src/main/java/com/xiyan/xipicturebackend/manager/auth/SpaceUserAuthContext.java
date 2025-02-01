@@ -1,8 +1,8 @@
 package com.xiyan.xipicturebackend.manager.auth;
 
-import com.xiyan.xipicturebackend.model.entity.Picture;
-import com.xiyan.xipicturebackend.model.entity.Space;
-import com.xiyan.xipicturebackend.model.entity.SpaceUser;
+import com.xiyan.xipicture.domain.picture.entity.Picture;
+import com.xiyan.xipicture.domain.space.entity.Space;
+import com.xiyan.xipicture.domain.space.entity.SpaceUser;
 import lombok.Data;
 
 /**
