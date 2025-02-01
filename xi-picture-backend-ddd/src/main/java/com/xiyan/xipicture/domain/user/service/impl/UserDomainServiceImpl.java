@@ -16,7 +16,7 @@ import com.xiyan.xipicture.infrastructure.exception.ErrorCode;
 import com.xiyan.xipicture.interfaces.dto.user.UserQueryRequest;
 import com.xiyan.xipicture.interfaces.vo.user.LoginUserVO;
 import com.xiyan.xipicture.interfaces.vo.user.UserVO;
-import com.xiyan.xipicturebackend.manager.auth.StpKit;
+import com.xiyan.xipicture.shared.auth.StpKit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;

@@ -11,7 +11,7 @@ import com.xiyan.xipicture.infrastructure.exception.ErrorCode;
 import com.xiyan.xipicture.infrastructure.exception.ThrowUtils;
 import com.xiyan.xipicture.interfaces.assembler.SpaceAssembler;
 import com.xiyan.xipicture.interfaces.dto.space.*;
-import com.xiyan.xipicturebackend.manager.auth.SpaceUserAuthManager;
+import com.xiyan.xipicture.shared.auth.SpaceUserAuthManager;
 import com.xiyan.xipicture.domain.space.entity.Space;
 import com.xiyan.xipicture.domain.user.entity.User;
 import com.xiyan.xipicture.domain.space.valueobject.SpaceLevelEnum;
