@@ -97,6 +97,11 @@ const originItems = [
     title: '空间管理',
   },
   {
+    key: '/user_exchange_vip',
+    label: '兑换会员',
+    title: '兑换会员',
+  },
+  {
     key: 'others',
     label: h('a', { href: 'https://www.codefather.cn', target: '_blank' }, '编程学习平台'),
     title: '编程学习平台',

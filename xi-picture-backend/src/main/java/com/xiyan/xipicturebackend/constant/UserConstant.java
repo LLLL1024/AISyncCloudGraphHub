@@ -18,6 +18,11 @@ public interface UserConstant {
     String DEFAULT_ROLE = "user";
 
     /**
+     * VIP 角色（只是扩展了，但是还没有校验 vip，对于 admin 来说，开通会员不需要降级成 vip）
+     */
+    String VIP_ROLE = "vip";
+
+    /**
      * 管理员角色
      */
     String ADMIN_ROLE = "admin";
