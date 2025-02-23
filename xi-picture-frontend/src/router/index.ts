@@ -15,6 +15,7 @@ import SearchPicturePage from "@/pages/SearchPicturePage.vue";
 import SpaceAnalyzePage from "@/pages/SpaceAnalyzePage.vue";
 import SpaceUserManagePage from "@/pages/admin/SpaceUserManagePage.vue";
 import UserExchangeVipPage from '@/pages/UserExchangeVipPage.vue'
+import SettingPage from '@/pages/SettingPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -103,12 +104,17 @@ const router = createRouter({
       component: UserExchangeVipPage,
     },
     {
+      path: '/setting',
+      name: '设置',
+      component: SettingPage,
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      component: () => import('../pages/AboutPage.vue'),
     },
   ],
 })
